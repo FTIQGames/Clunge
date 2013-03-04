@@ -166,5 +166,17 @@ pip-log.txt
 ## Unity
 #############
 
-/Library/
-/Temp/
+/Clunge/Library/metadata
+
+/Clunge/Library/ScriptAssemblies
+
+/Clunge/Library/AssetServerCacheV3
+/Clunge/Library/AssetVersioning.db
+/Clunge/Library/BuildPlayer.prefs
+/Clunge/Library/expandedItems
+/Clunge/Library/FailedAssetImports.txt
+/Clunge/Library/guidmapper
+/Clunge/Library/ScriptMapper
+/Clunge/Library/AnnotationManager
+/Clunge/Library/assetDatabase3
+/Clunge/Library/AssetImportState
