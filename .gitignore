@@ -9,3 +9,8 @@
 /Clunge/Library/metadata/*
 /Clunge/Library/*
 !/Clunge/Library/*.asset
+
+/Clunge/*.userprefs
+/Clunge/*.sln
+/Clunge/*.pidb
+/Clunge/*.csproj
