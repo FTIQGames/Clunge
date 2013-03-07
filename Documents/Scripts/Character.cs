@@ -1,8 +1,11 @@
 using UnityEngine;
 using System.Collections;
 
-public class Player : MonoBehaviour 
+public enum MyTeam { Team1, Team2, None }
+
+public class Character : MonoBehaviour 
 {
+	public MyTeam myTeam = MyTeam.Team1;
 	
 	[HideInInspector] public enum facing { Right, Left }
 	[HideInInspector] public facing facingDir;
@@ -13,6 +16,7 @@ public class Player : MonoBehaviour
 	[HideInInspector] public bool isLeft;
 	[HideInInspector] public bool isRight;
 	[HideInInspector] public bool isJump;
+	[HideInInspector] public bool isPass;
 	
 	[HideInInspector] public bool jumping = false;
 	[HideInInspector] public bool grounded = false;
@@ -22,6 +26,7 @@ public class Player : MonoBehaviour
 	[HideInInspector] public bool blockedUp;
 	[HideInInspector] public bool blockedDown;
 	
+	[HideInInspector] public bool isScoring;
 	[HideInInspector] public bool alive = true;
 	[HideInInspector] public Vector3 spawnPos;
 	
@@ -29,6 +34,7 @@ public class Player : MonoBehaviour
 	
 	private float moveVel;
 	private float runVel = 4f;
+	private float walkVel = 3f; // walk while carrying ball
 	private Vector3 vel2;
 	private Vector3 vel;
 	
@@ -53,6 +59,9 @@ public class Player : MonoBehaviour
 	// layer masks
 	protected int groundMask = 1 << 9 | 1 << 8; // Ground, Block
 	protected int blockMask = 1 << 8; //Block
+		
+	protected bool hasBall = false;
+	protected string team = "";
 	
 	public virtual void Awake()
 	{
@@ -66,8 +75,6 @@ public class Player : MonoBehaviour
 		maxVelY = fallVel;
 		vel.y = 0;
 		StartCoroutine(StartGravity());
-		
-		spawnPos = thisTransform.position;
 	}
 	
 	IEnumerator StartGravity()
@@ -79,7 +86,9 @@ public class Player : MonoBehaviour
 	
 	// Update is called once per frame
 	public virtual void UpdateMovement() 
-	{		
+	{
+		if(xa.gameOver == true || alive == false) return;
+		
 		vel.x = 0;
 		
 		// pressed right button
@@ -136,6 +145,29 @@ public class Player : MonoBehaviour
 		// apply movement 
 		vel2 = vel * Time.deltaTime;
 		thisTransform.position += new Vector3(vel2.x,vel2.y,0f);
+		
+		// pass the ball
+		if(isPass == true && hasBall == true && thisTransform.childCount > 1)
+		{
+			xa.ball.Pass(vel.x);
+			RemoveBall();
+		}
+		
+		// make sure ball is removed if stolen by other team, probably a better way to do this
+		if(hasBall == true && thisTransform.childCount < 2)
+		{
+			RemoveBall();
+		}
+		
+		// screen wrap
+		if(thisTransform.position.x > 8.35f)
+		{
+			thisTransform.position = new Vector3(-8.35f,thisTransform.position.y, 0);
+		}
+		if(thisTransform.position.x < -8.35f)
+		{
+			thisTransform.position = new Vector3(8.35f,thisTransform.position.y, 0);
+		}
 	}
 	
 	// ============================== RAYCASTS ============================== 
@@ -181,6 +213,18 @@ public class Player : MonoBehaviour
 		{
 			BlockedLeft();
 		}
+		
+		if(hasBall == true)
+		{
+			if (Physics.Raycast(new Vector3(thisTransform.position.x,thisTransform.position.y + 0.7f,thisTransform.position.z), Vector3.right, out hitInfo, halfMyX+absVel2X, groundMask))
+			{
+				BlockedRight();
+			}
+			if(Physics.Raycast(new Vector3(thisTransform.position.x,thisTransform.position.y + 0.7f,thisTransform.position.z), -Vector3.right, out hitInfo, halfMyX+absVel2X, groundMask))
+			{
+				BlockedLeft();
+			}
+		}
 	}
 	
 	void BlockedUp()
@@ -212,42 +256,66 @@ public class Player : MonoBehaviour
 		}
 	}
 	
-	public void Update()
+	// ============================== BALL HANDLING ==============================
+	
+	public virtual void PickUpBall()
 	{
-		// these are false unless one of keys is pressed
-		isLeft = false;
-		isRight = false;
-		isJump = false;
+
+		hasBall = true;
+		rayDistUp = 0.8f;
+		moveVel = walkVel;
 		
-		movingDir = moving.None;
-		
-		// keyboard input
-		if(Input.GetKey(KeyCode.A)) 
-		{ 
-			isLeft = true; 
-			facingDir = facing.Left;
-		}
-		if (Input.GetKey(KeyCode.D) && isLeft == false) 
-		{ 
-			isRight = true; 
-			facingDir = facing.Right;
-		}
-		
-		if (Input.GetKeyDown(KeyCode.W)) 
-		{ 
-			isJump = true; 
-		}
-		
-		if(Input.GetKey(KeyCode.LeftShift) && Input.GetKeyDown(KeyCode.T))
+		if(myTeam == MyTeam.Team1)
 		{
-			//print ("reload level");
-			Application.LoadLevel(0);
+			team = "Team1";
+		}
+		else if(myTeam == MyTeam.Team2)
+		{
+			team = "Team2";
 		}
 		
-		UpdateMovement();
+		xa.ball.PickUp(thisTransform, team);
+		
+		if(xa.letsPlayKeepaway == true)
+		{
+			StartCoroutine(IncreaseScore());
+		}
 	}
 	
-	// ============================== PLAYER VISIBILITY. ==============================
+	void RemoveBall()
+	{
+		hasBall = false;
+		rayDistUp = 0.375f;
+		moveVel = runVel;
+	}
+	
+	// if the ball gets stuck, player1 can reset it by pressing a key
+	public virtual void ResetBall()
+	{
+		xa.ball.ResetBall();
+	}
+	
+	// ============================== KEEPAWAY SCORE ==============================
+	
+	IEnumerator IncreaseScore()
+	{
+		if(myTeam == MyTeam.Team1)
+		{
+			team = "Team1";
+		}
+		else
+		{
+			team = "Team2";
+		}
+		
+		while(hasBall == true && xa.gameOver == false)
+		{
+			xa.scoreManager.IncreaseScore(team);
+			yield return null;
+		}
+	}
+	
+	// ============================== PLAYER VISIBILITY. FOR CREATING 2, 3 AND 4 PLAYER GAMES ==============================
 	
 	public virtual void HideMe()
 	{
