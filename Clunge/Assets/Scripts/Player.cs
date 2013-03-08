@@ -28,18 +28,19 @@ public class Player : MonoBehaviour
 	protected Transform thisTransform;
 	
 	private float moveVel;
-	private float runVel = 4f;
+	public float runVel = 4f;
 	private Vector3 vel2;
 	private Vector3 vel;
 	
-	private float jumpVel = 16f;
-	private float jump2Vel = 14f;
-	private float fallVel = 18f;
+	public float jumpVel = 16f;
+	public float jump2Vel = 14f;
+	public float fallVel = 18f;
 	
 	private int jumps = 0;
     private int maxJumps = 2; // set to 2 for double jump
 	
 	private float gravityY;// = 52f;
+	public float gravity = 52f;
 	private float maxVelY = 0f;
 		
 	private RaycastHit hitInfo;
@@ -74,7 +75,8 @@ public class Player : MonoBehaviour
 	{
 		// wait for things to settle before applying gravity
 		yield return new WaitForSeconds(0.1f);
-		gravityY = 52f;
+		//gravityY = 52f;
+		gravityY = gravity;
 	}
 	
 	// Update is called once per frame
